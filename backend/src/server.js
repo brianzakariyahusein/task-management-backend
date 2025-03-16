@@ -16,8 +16,10 @@ app.use(express.json());
 app.use(cors());
 
 const taskRoutes = require("./routes/taskRoutes");
-
 app.use("/api/tasks", taskRoutes);
+
+const userRoutes = require("./routes/authRoutes");
+app.use("/api/auth", userRoutes);
 
 // Route sederhana
 app.get("/", (req, res) => {
