@@ -69,7 +69,7 @@ exports.forgotPassword = async (req, res) => {
       return res.status(400).json({ message: "Email tidak ditemukan!" });
     }
 
-    const resetToken = jwt.sign({ userId: useer._id }, process.env.JWT_SECRET, {
+    const resetToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: "15m",
     });
 
@@ -81,7 +81,8 @@ exports.forgotPassword = async (req, res) => {
       },
     });
 
-    const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+    const resetLink = `http://localhost:5000/api/auth/reset-password?token=${resetToken}`;
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
@@ -101,31 +102,41 @@ exports.forgotPassword = async (req, res) => {
 // RESET PASSWORD
 exports.resetPassword = async (req, res) => {
   try {
-    const { token } = req.params;
-    const { newPassword } = req.body;
+    const { token, newPassword } = req.body;
 
+    // Cek apakah token diberikan
+    if (!token) {
+      return res.status(400).json({ message: "Token tidak boleh kosong!" });
+    }
+
+    // Verifikasi token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(400).json({ message: "Token tidak valid atau sudah kadaluarsa!" });
+    }
+
+    // Cek panjang password minimal 6 karakter
     if (newPassword.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password harus minimal 6 karakter!" });
+      return res.status(400).json({ message: "Password harus minimal 6 karakter!" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Cari user berdasarkan ID di token
     const user = await User.findById(decoded.userId);
-
     if (!user) {
-      return res
-        .status(400)
-        .json({ message: "Token tidak valid atau user tidak ditemukan!" });
+      return res.status(404).json({ message: "User tidak ditemukan!" });
     }
 
+    // Hash password baru sebelum menyimpan
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
+    // Simpan password baru
     user.password = hashedPassword;
     await user.save();
 
-    res.status(200).json({ message: "Password berhasil direset!" });
+    res.status(200).json({ message: "Password berhasil direset, silakan login dengan password baru!" });
   } catch (error) {
     console.error("Error saat reset password:", error);
     res.status(500).json({ message: "Terjadi kesalahan pada server!" });
