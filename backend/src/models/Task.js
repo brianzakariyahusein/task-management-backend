@@ -14,12 +14,17 @@ const taskSchema = new mongoose.Schema(
       enum: ["todo", "in progress", "done"],
       default: "todo",
     },
-    dueDate: {
-      type: Date,
+    dueDate: { 
+      type: String, required: true 
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    }, 
   },
   { timestamps: true }
 );
 
-const Task = mongoose.model('Task',taskSchema)
-module.exports = Task
+const Task = mongoose.model("Task", taskSchema);
+module.exports = Task;
